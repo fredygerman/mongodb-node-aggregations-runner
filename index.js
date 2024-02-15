@@ -7,8 +7,31 @@ console.log(`MONGODB_URI: ${process.env.MONGODB_URI}`);
 const uri = "mongodb://localhost:27017";
 
 const client = new MongoClient(uri);
-const database = "sample_mflix";
-const collection = "movies";
+const database_name = "sample_mflix";
+const collection_name = "movies";
+
+const title_to_find = "Cars";
+const title_to_replace = "Cars 2012";
+
+const aggregation_pipeline = [
+  {
+    $match: {
+      title: title_to_find,
+    },
+  },
+  {
+    $addFields: {
+      title: {
+        $concat: ["$title", title_to_replace],
+      },
+    },
+  },
+  {
+    $merge: {
+      into: collection_name,
+    },
+  },
+];
 
 async function run() {
   try {
@@ -24,10 +47,10 @@ run().catch(console.dir);
 async function find() {
   try {
     await client.connect();
-    const database = client.db("sample_mflix");
-    const movies = database.collection("movies");
+    const database = client.db(database_name);
+    const movies = database.collection(collection_name);
 
-    const query = { title: "Cars" };
+    const query = { title: title_to_find };
     const movie = await movies.findOne(query);
 
     console.log(movie);
@@ -41,28 +64,9 @@ async function find() {
 
 async function aggregation() {
   try {
-    const pipeline = [
-      {
-        $match: {
-          title: "Cars 2010 2012",
-        },
-      },
-      {
-        $addFields: {
-          title: {
-            $concat: ["$title", " 2012"],
-          },
-        },
-      },
-      {
-        $merge: {
-          into: collection,
-        },
-      },
-    ];
-
-    const coll = client.db(database).collection(collection);
-    const cursor = coll.aggregate(pipeline);
+    await client.connect();
+    const coll = client.db(database_name).collection(collection_name);
+    const cursor = coll.aggregate(aggregation_pipeline);
 
     const result = await cursor.toArray();
     console.log(result);
