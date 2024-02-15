@@ -7,6 +7,8 @@ console.log(`MONGODB_URI: ${process.env.MONGODB_URI}`);
 const uri = "mongodb://localhost:27017";
 
 const client = new MongoClient(uri);
+const database = "sample_mflix";
+const collection = "movies";
 
 async function run() {
   try {
@@ -15,6 +17,7 @@ async function run() {
     console.error(e);
   }
   await find();
+  await aggregation();
 }
 run().catch(console.dir);
 
@@ -30,6 +33,41 @@ async function find() {
     console.log(movie);
   } catch (e) {
     console.error("Error in find: ", e);
+  } finally {
+    // Ensures that the client will close when you finish/error
+    await client.close();
+  }
+}
+
+async function aggregation() {
+  try {
+    const pipeline = [
+      {
+        $match: {
+          title: "Cars 2010 2012",
+        },
+      },
+      {
+        $addFields: {
+          title: {
+            $concat: ["$title", " 2012"],
+          },
+        },
+      },
+      {
+        $merge: {
+          into: collection,
+        },
+      },
+    ];
+
+    const coll = client.db(database).collection(collection);
+    const cursor = coll.aggregate(pipeline);
+
+    const result = await cursor.toArray();
+    console.log(result);
+  } catch (e) {
+    console.error("Error in aggregation: ", e);
   } finally {
     // Ensures that the client will close when you finish/error
     await client.close();
